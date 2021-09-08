@@ -21,4 +21,4 @@ for child in desc.children:
     for field in child.fields:
         print(f"  {field.name} is a {field.type}")
 
-print("\nScript finished")
+print("\nScript finished");
