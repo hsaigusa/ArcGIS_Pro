@@ -1,4 +1,4 @@
-import arcpy
+import arcpy, os
 arcpy.env.overwriteOutput = True
 
 # Project object
@@ -40,6 +40,7 @@ placeSortedByNameList = sorted([
 placesCoordsDict = {row[0]:row[1] for row in arcpy.da.SearchCursor(
     placesLayer,["NAME","SHAPE@XY"])}
 
+print(placesCoordsDict)
 # Create Spatial Reference object for the places layer which will be
 # the geographic coordinate system of the source feature class
 srPlacesLayer = arcpy.Describe(placesLayer).SpatialReference
@@ -47,4 +48,67 @@ srPlacesLayer = arcpy.Describe(placesLayer).SpatialReference
 # Write one PDF page for each place in the sorted list
 # Use slice notation to only do the first 10 olaces in the list
 for pageCount, placeName in enumerate(placeSortedByNameList[:10]):
-    
+    xCoord,yCoord = placesCoordsDict[placeName]
+    mgaZone = 1 + int((xCoord + 180) / 6)
+    print(f"{placeName} is in zone {mgaZone}")
+    srMGA = arcpy.SpatialReference(f"GDA2020 MGA Zone {mgaZone}")
+
+    geogFC = fr"{aprx.defaultGeodatabase}\geogFC"
+    projFC = fr"{aprx.defaultGeodatabase}\projFC"
+
+    arcpy.CreateFishnet_management(geogFC,
+                                   f"{xCoord - 0.25} {yCoord - 0.25}",
+                                   f"{xCoord + 0.25} {yCoord + 0.25}",
+                                   0.5, 0.5, 1, 1,
+                                   geometry_type="POLYGON", labels="NO_LABELS")
+    arcpy.DefineProjection_management(geogFC, srPlacesLayer)
+    arcpy.Project_management(geogFC,projFC, srMGA)
+    projFCExtent = arcpy.Describe(projFC).extent
+
+    if mgaZone == 54:
+        mapFrame54.visible = True
+        mapFrame54.camera.setExtent(projFCExtent)
+        mapFrame54.camera.scale = mapFrame54.camera.scale * 1.05
+        mapFrame55.visible = False
+        mapFrame56.visible = False
+        srText54.visible = True
+        srText55.visible = False
+        srText56.visible = False
+    elif mgaZone == 55:
+        mapFrame54.visible = False
+        mapFrame55.camera.setExtent(projFCExtent)
+        mapFrame55.camera.scale = mapFrame55.camera.scale * 1.05
+        mapFrame55.visible = True
+        mapFrame56.visible = False
+        srText54.visible = False
+        srText55.visible = True
+        srText56.visible = False
+    elif mgaZone == 56:
+        mapFrame54.visible = False
+        mapFrame56.camera.setExtent(projFCExtent)
+        mapFrame56.camera.scale = mapFrame56.camera.scale * 1.05
+        mapFrame55.visible = False
+        mapFrame56.visible = True
+        srText54.visible = False
+        srText55.visible = False
+        srText56.visible = True
+    else:
+        print(f"Unexpected zone number of {mgaZone} encountered")
+
+    # Title text object
+    titleText = lyt.listElements('TEXT_ELEMENT',"Title")[0]
+    titleText.text = placeName
+
+    #Export PDF for this country's page
+    lyt.exportToPDF(fr"D:\LPA\PDFs\test{pageCount}.pdf")
+    pdfDoc.appendPages(fr"D:\LPA\PDFs\test{pageCount}.pdf")
+
+# Save and close PDF and open in Adobe
+pdfDoc.saveAndClose()
+del pdfDoc
+os.startfile(finalPDF)
+# Delete project object
+del aprx
+
+
+
