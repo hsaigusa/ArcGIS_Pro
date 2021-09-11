@@ -14,7 +14,7 @@ for child in desc.children:
     if child.dataType == "FeatureDataset":
         pass
     if hasattr(child, "ShapeType"):
-        print(f"    with Extent: {child.extent}")
+        print(f"    with Extent: {child.extent} and projection: {child.spatialReference.name}")
     else:
         print(f"  {child.name} is a {child.dataType}")
     print("   and Fields:")
