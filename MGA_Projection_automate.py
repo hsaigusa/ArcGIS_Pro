@@ -41,12 +41,13 @@ placesCoordsDict = {row[0]:row[1] for row in arcpy.da.SearchCursor(
     placesLayer,["NAME","SHAPE@XY"])}
 
 print(placesCoordsDict)
+
 # Create Spatial Reference object for the places layer which will be
 # the geographic coordinate system of the source feature class
 srPlacesLayer = arcpy.Describe(placesLayer).SpatialReference
 
 # Write one PDF page for each place in the sorted list
-# Use slice notation to only do the first 10 olaces in the list
+# Use slice notation to only do the first 10 places in the list
 for pageCount, placeName in enumerate(placeSortedByNameList[:10]):
     xCoord,yCoord = placesCoordsDict[placeName]
     mgaZone = 1 + int((xCoord + 180) / 6)

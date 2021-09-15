@@ -6,34 +6,32 @@ import arcpy
 arcpy.env.overwriteOutput = True
 
 # variables
-PROJECT = r"D:\LPA\Project\MyProject\MyProject.aprx"
-WORKSPACE = "D:\LPA\Project\MyProject"
+project = r"D:\LPA\Project\MyProject\MyProject.aprx"
+workSpace = "D:\LPA\Project\MyProject"
 srWGS84 = arcpy.SpatialReference("WGS 1984")
 
-# List names of layers
-aprx = arcpy.mp.ArcGISProject(PROJECT)
-for m in aprx.listMaps():
-    print("Map: {0} Layers".format(m.name))
-    for lyr in m.listLayers():
-        print("  " + lyr.name)
-del aprx
+# Check the current connection of the layers
+aprx = arcpy.mp.ArcGISProject(project)
+mapx = aprx.listMaps()[0]
+for lyr in mapx.listLayers():
+    if lyr.supports("DATASOURCE"):
+        print(f"{lyr.name}: {lyr.connectionProperties}")
 
-# Create a new gdb to send layers
-arcpy.CreateFileGDB_management(WORKSPACE, "sd_package")
 
-arcpy.FeatureClassToFeatureClass_conversion()
+# Create a new gdb to send layers to it
+arcpy.CreateFileGDB_management(workSpace, "sd_package")
+newSource = "D:\LPA\Project\MyProject\sd_package.gdb"
 
-# Check the projection of all layers
-dElement = r"D:\EsriTraining_Past\SADistance\SanDiego.gdb"
-desc = arcpy.Describe(dElement)
-for child in desc.children:
-    if child.dataType == "FeatureDataset":
-        pass
-    if hasattr(child, "ShapeType"):
-        print(f"    {child.name} with projection: {child.spatialReference.name}")
-    else:
-        pass
+# Change the all layer sources to the new gdb
+for lyr in mapx.listLayers():
+    if lyr.supports("DATASOURCE"):
+        arcpy.FeatureClassToFeatureClass_conversion(lyr.dataSource,newSource,lyr.name)
+        origConnection = lyr.connectionProperties
+        newConnection = {'connction_info': {'database': newSource},
+                         'workspace_factory': 'File Geodatabase',
+                         'dataset': lyr}
+        lyr.updateConnectionProperties(origConnection, newConnection)
+        print(f"{lyr.name} new connection:{lyr.connectionProperties}")
 
-# Change the projection of all layers
-for child in desc.children:
-    arcpy.management.DefineProjection(dElement, srWGS84)
+# Delete project object
+del aprx,mapx
